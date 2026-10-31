@@ -1,0 +1,7 @@
+/bin/
+/dist/
+/artifacts/
+/.cache/
+*.out
+.env
+__pycache__/

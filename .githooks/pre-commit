@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+just fmt-check
+git diff --cached --check
