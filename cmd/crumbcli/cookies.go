@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/browserutils/kooky"
 )
@@ -92,6 +93,9 @@ func selectCookies(raw []*kooky.Cookie, filters Filters, now time.Time) ([]Cooki
 		}
 		if !c.Expires.IsZero() && !c.Expires.After(now) {
 			continue
+		}
+		if !utf8.ValidString(c.Name) || !utf8.ValidString(c.Value) || !utf8.ValidString(c.Domain) || !utf8.ValidString(c.Path) {
+			return nil, errors.New("selected cookie contains invalid UTF-8; cannot export JSON without changing cookie data")
 		}
 		record := Cookie{Name: c.Name, Value: c.Value, Domain: c.Domain, Path: c.Path, Secure: c.Secure, HTTPOnly: c.HttpOnly}
 		k := key{c.Name, c.Domain, c.Path}

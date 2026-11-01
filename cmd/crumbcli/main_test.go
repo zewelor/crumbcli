@@ -133,6 +133,7 @@ func TestCookieValuesSurviveJSONOutput(t *testing.T) {
 		{"JSON", `{"synthetic":"private"}`},
 		{"HTTP punctuation and controls", "synthetic;\"\\\r\n"},
 		{"Unicode", "synthetic-zażółć-🍪"},
+		{"literal replacement character", "synthetic-\ufffd"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			app, args := testApp(t)
@@ -150,6 +151,39 @@ func TestCookieValuesSurviveJSONOutput(t *testing.T) {
 			}
 			if stderr.Len() != 0 {
 				t.Fatal("successful export emitted diagnostics")
+			}
+		})
+	}
+}
+
+func TestInvalidUTF8FailsBeforeJSONOutput(t *testing.T) {
+	for _, field := range []string{"name", "value", "domain", "path"} {
+		t.Run(field, func(t *testing.T) {
+			app, args := testApp(t)
+			args = append(args, "--domain", "x.com")
+			invalid := testCookie("sid", "synthetic-private-value", "x.com")
+			switch field {
+			case "name":
+				invalid.Name = "synthetic-\xff"
+			case "value":
+				invalid.Value = "synthetic-\xff"
+			case "domain":
+				invalid.Domain = "synthetic-\xff.x.com"
+			case "path":
+				invalid.Path = "/synthetic-\xff"
+			}
+			app.read = func(context.Context, string, string, Filters) ([]*kooky.Cookie, error) {
+				return []*kooky.Cookie{testCookie("valid", "synthetic-valid-value", "x.com"), invalid}, nil
+			}
+			var out, stderr bytes.Buffer
+			if app.run(args, &out, &stderr) != 1 {
+				t.Fatal("invalid UTF-8 must fail instead of changing cookie data")
+			}
+			if out.Len() != 0 {
+				t.Fatal("invalid UTF-8 emitted partial cookie output")
+			}
+			if !strings.Contains(stderr.String(), "invalid UTF-8") || strings.Contains(stderr.String(), "synthetic-") {
+				t.Fatal("invalid UTF-8 was not safely reported")
 			}
 		})
 	}

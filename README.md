@@ -22,7 +22,7 @@ Output is a JSON array containing cookie values, sorted by domain/path/name:
 [{"name":"session","value":"synthetic-example","domain":".example.com","path":"/","secure":true,"httpOnly":true}]
 ```
 
-Values, including empty strings and JSON text, are preserved. Expired cookies are omitted. No matches returns `[]` with exit code 0. Usage errors exit 2; read/output failures exit 1. Diagnostics use stderr and never include cookie values. Ctrl+C and SIGTERM terminate the process using OS defaults. An interrupted or failed output stream can contain partial JSON.
+Values, including empty strings, Unicode and JSON text, are preserved. Invalid UTF-8 in any selected cookie field fails with exit code 1 before any JSON is written, instead of silently replacing bytes. Expired cookies are omitted. No matches returns `[]` with exit code 0. Usage errors exit 2; read/output failures exit 1. Diagnostics use stderr and never include cookie values. Ctrl+C and SIGTERM terminate the process using OS defaults. An interrupted or failed output stream can contain partial JSON.
 
 The consumer validates cookies before constructing HTTP requests. CrumbCLI does not write to Vault, upload cookies or persist exports.
 

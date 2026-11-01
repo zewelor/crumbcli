@@ -33,9 +33,10 @@ def main():
         future = (int(time.time() + 86400) + epoch_offset) * 1000000
         expired = (int(time.time() - 86400) + epoch_offset) * 1000000
         creation = (int(time.time()) + epoch_offset) * 1000000
-        records = [("auth_token", "synthetic-auth-secret", ".x.com"), ("ct0", "synthetic-csrf-secret", "x.com"), ("sid", "synthetic-unrelated-secret", "evilx.com"), ("g_state", '{"synthetic":"private"}', "x.com"), ("empty", "", "x.com"), ("large", "synthetic-blocking-" + "x" * (256 << 10), "blocking.test"), ("expired", "synthetic-expired-secret", "expiry.test")]
+        records = [("auth_token", "synthetic-auth-secret", ".x.com"), ("ct0", "synthetic-csrf-secret", "x.com"), ("sid", "synthetic-unrelated-secret", "evilx.com"), ("g_state", '{"synthetic":"private"}', "x.com"), ("empty", "", "x.com"), ("large", "synthetic-blocking-" + "x" * (256 << 10), "blocking.test"), ("expired", "synthetic-expired-secret", "expiry.test"), ("invalid", "synthetic-invalid-secret", "invalid.test")]
         for name, value, host in records:
             connection.execute("INSERT INTO cookies (creation_utc,host_key,name,value,encrypted_value,path,expires_utc,is_secure,is_httponly) VALUES (?,?,?,?,?,?,?,?,?)", (creation, host, name, value, sqlite3.Binary(b""), "/", expired if name == "expired" else future, 1, 1))
+        connection.execute("UPDATE cookies SET value=CAST(? AS TEXT) WHERE host_key=?", (sqlite3.Binary(b"synthetic-invalid-secret-\xff"), "invalid.test"))
         connection.commit()
         connection.close()
         env = {**os.environ, "HOME": str(root)}
@@ -106,6 +107,8 @@ def main():
         run([], expected=2)
         run(["--domain", "x.com", "--unknown"], expected=2)
         checks.append("invalid and missing filters and unknown flags rejected")
+        run(["--domain", "x.com", "--domain", "invalid.test"], expected=1)
+        checks.append("invalid UTF-8 from SQLite fails without emitting partial cookie output")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps({"status": "passed", "checks": checks, "boundaries": "synthetic unpartitioned Chromium SQLite profile with plaintext values; no live keyring/decryption or upstream session validation"}, indent=2) + "\n")
     print(f"PASS: {len(checks)} hermetic binary scenarios; report: {args.output}")
