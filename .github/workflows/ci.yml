@@ -31,6 +31,8 @@ jobs:
         with:
           go-version-file: go.mod
       - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+      - name: Check Go module files
+        run: go mod tidy -diff
       - name: Verify
         run: just ci
       - name: Build Linux archives
