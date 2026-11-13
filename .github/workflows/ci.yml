@@ -30,7 +30,11 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+      - name: Install just
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends just
+          just --version
       - name: Check Go module files
         run: go mod tidy -diff
       - name: Verify
